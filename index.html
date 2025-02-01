@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="pl">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Fiszki</title>
+        <style>
+            /* Reset i podstawowe style */
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+            body {
+                font-family: Arial, sans-serif;
+                background: #f4f4f4;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                min-height: 100vh;
+                padding: 20px;
+            }
+            .container {
+                max-width: 400px;
+                width: 100%;
+                text-align: center;
+            }
+            /* Kontener fiszki – ustawienie perspektywy */
+            .flashcard-container {
+                perspective: 1000px;
+            }
+            /* Zewnętrzny element karty – odpowiedzialny za obrót */
+            .flashcard {
+                width: 100%;
+                height: 350px; /* Większa wysokość, aby pomieścić więcej tekstu */
+                position: relative;
+                transition: transform 0.6s;
+                transform-style: preserve-3d;
+                cursor: pointer;
+            }
+            .flashcard.flip {
+                transform: rotateY(180deg);
+            }
+            /* Wewnętrzne strony karty */
+            .flashcard-side {
+                position: absolute;
+                width: 100%;
+                height: 100%;
+                border-radius: 10px;
+                top: 0;
+                left: 0;
+                /* Ważne: backface-visibility ukrywa tylną stronę */
+                -webkit-backface-visibility: hidden;
+                backface-visibility: hidden;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 20px;
+            }
+            /* Domyślne tło zewnętrznych stron – pozostaje jednolite */
+            .flashcard-front {
+                background: #fff;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            }
+            .flashcard-back {
+                background: #fafafa;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                transform: rotateY(180deg);
+                -webkit-transform: rotateY(180deg);
+            }
+            /* Wewnętrzny element z treścią – na niego będziemy nakładać kolor tła */
+            .card-content {
+                width: 100%;
+                height: 100%;
+                border-radius: 10px;
+                background: #fff; /* domyślnie biały */
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 20px;
+                transition: background-color 0.3s;
+            }
+            /* Przyciski i selektory */
+            .controls {
+                margin-top: 20px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+            button,
+            select {
+                padding: 10px 15px;
+                border: none;
+                border-radius: 5px;
+                font-size: 1em;
+            }
+            button {
+                background: #3498db;
+                color: #fff;
+                cursor: pointer;
+                transition: background 0.3s;
+            }
+            button:hover {
+                background: #2980b9;
+            }
+            select {
+                background: #fff;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                cursor: pointer;
+            }
+            /* Responsywność */
+            @media (max-width: 480px) {
+                .flashcard {
+                    height: 300px; /* Dostosowana wysokość dla mniejszych ekranów */
+                }
+                .card-content {
+                    font-size: 1em;
+                    padding: 10px;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="flashcard-container">
+                <div id="flashcard" class="flashcard">
+                    <!-- Strona z pytaniem -->
+                    <div class="flashcard-side flashcard-front" id="card-front">
+                        <div class="card-content">
+                            <!-- Treść pytania -->
+                        </div>
+                    </div>
+                    <!-- Strona z odpowiedzią -->
+                    <div class="flashcard-side flashcard-back" id="card-back">
+                        <div class="card-content">
+                            <!-- Treść odpowiedzi -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="controls">
+                <button id="nextBtn">Następna fiszka</button>
+                <select id="filterSelect">
+                    <option value="all">Wszystkie pytania</option>
+                    <option value="1">Pytania priorytetem 1</option>
+                    <option value="2">Pytania priorytetem 2</option>
+                    <option value="3">Pytania priorytetem 3</option>
+                </select>
+            </div>
+        </div>
+
+        <script>
+            // Tablica z pytaniami, odpowiedziami i priorytetem
+            const flashcards = [
+                // Podstawy programowania
+                {
+                    question:
+                        "Scharakteryzuj koncepcję programowania strukturalnego, ilustrując ją na przykładzie języka C.",
+                    answer: "Programowanie strukturalne to styl pisania programów, w którym kod jest podzielony na logiczne bloki takie jak funkcje, pętle i instrukcje warunkowe. C: w mainie x=10 i wywołanie funkcji suma(x) i za mainem funkcja suma.",
+                    priority: 3,
+                },
+                {
+                    question:
+                        "Omów pojęcia wyrażenia i instrukcji w programowaniu. Jakie są między nimi różnice?",
+                    answer: "Wyrażenie to fragment kodu, który coś oblicza i zwraca wartość, np.. Suma, iloczyn. Daje jakiś wynik.\nInstrukcja to polecenie, mówiące programowi co ma zrobić. Wykonuje działanie, np zmienia stan programu. Może zawierać wyrażenie, ale nie zawsze zwraca wartość. Np. if, while, przypisanie.",
+                    priority: 3,
+                },
+                {
+                    question:
+                        "Wyjaśnij, czym jest funkcja w programowaniu oraz z jakich części się składa. Jaką rolę pełnią poszczególne jej elementy? Jakie są sposoby przekazywania parametrów do funkcji?",
+                    answer: "Funkcja to blok kodu wykonujący jakieś zadanie. Pozwala na wielokrotne wykorzystanie tego samego fragmentu kodu. Składa się z nagłówka funkcji(typ, nazwa, parametry), ciała funkcji i instrukcji zwracającej(return).\nPrzekazywanie funkcji przez wartość: przekazywana jest kopia zmiennej(jej wartość nie może być zmieniona(bo gdzie ją zapisać?)\nPrzekazywanie funkcji przez adres(wskaźnik): przekazywany jest adres pamięci zmiennej(jej wartość może być zmieniona)\nPrzekazywanie funkcji przez referencję(w c++): To co przez wskaźnik ale używa się ampersand(&) zamiast gwiazdek.",
+                    priority: 3,
+                },
+                {
+                    question:
+                        "Jakie są cechy pamięci statycznej, stosu oraz sterty. Podaj przykłady, w jakich sytuacjach każdy typ pamięci jest używany.",
+                    answer: "Pamięć statyczna przydzielana w czasie kompilacji, rozmiar znany przed uruchomieniem programu. Np. zmienne globalne albo zmienne static.\nStos zasada LIFO. Przechowuje zmienne lokalne, ma ograniczony rozmiar.\nSterta(kopiec) ma dynamicznie przydzielaną pamięć, rozmiar kontrolowany ręcznie. Używany do tworzenia obiektów np w C++.",
+                    priority: 3,
+                },
+                {
+                    question:
+                        "Jak działa mechanizm rekurencji w programowaniu i kiedy warto go stosować?",
+                    answer: "Rekurencja to wykonywanie funkcji przez samą siebie do osiągnięcia postawionego warunku. Stosowana gdy można podzielić problem na mniejsze, np. obliczanie ciągów(Fibonaciego) albo sortowanie.",
+                    priority: 3,
+                },
+                {
+                    question:
+                        "Wyjaśnij pojęcia wskaźnika i referencji. Jakie możliwości oferują, z jakimi problemami należy się liczyć?",
+                    answer: "Wskaźnik to zmienna przechowująca adres innej zmiennej. Może prowadzić do wycieków pamięci, umożliwia dynamiczne zarządzanie pamięcią.\nReferencja to inna nazwa innej zmiennej. Bezpieczniejsza bo odnosi się do obiektu, nie pozwala na manipulację adresami.",
+                    priority: 3,
+                },
+                {
+                    question:
+                        "Omów funkcję i zastosowanie typów tablicowych w programowaniu strukturalnym, a także przedstaw ich rodzaje.",
+                    answer: "Tablice służą do przechowywania i zarządzania zbiorami danych tego samego typu. Indeksowanie tabela[indeks] Rodzaje: jednowymiarowe oraz wielowymiarowe albo statyczne i dynamiczne.",
+                    priority: 3,
+                },
+                {
+                    question:
+                        "Wyjaśnij, w jaki sposób struktury i unie pozwalają na efektywne zarządzanie danymi w języku C. Jakie są typowe scenariusze ich zastosowania?",
+                    answer: "Struktura(jak obiekt) pozwala grupować różne typy danych pod jedną nazwą. Pozwala przechowywać obiekty\nUnia pozwala przechowywać rożne typy danych w tym samym miejscu pamięci. Pozwala oszczędzać pamięć.",
+                    priority: 3,
+                },
+
+                // Programowanie obiektowe
+                {
+                    question:
+                        "Czym są klasa i obiekt w programowaniu obiektowym? Omów ich składowe.",
+                    answer: "Klasa jest schematem, na podstawie którego tworzy się obiekty. \nObiekt to konkretny egzemplarz klasy.\nSkładają się z pól, metód(funkcji), konstruktorów.",
+                    priority: 3,
+                },
+                {
+                    question:
+                        "Na czym polega koncepcja abstrakcji w programowaniu obiektowym i jakie mechanizmy języków programowania ją wspierają?",
+                    answer: "Abstrakcja polega na ukrywaniu szczegółów implementacji i udostępnianiu tylko istostnych funkcji obiektu. Np. znamy nazwę metody,przyjmowane parametry i zwracane dane. Później dopiero jakaś klasa implementuje naszą abstrakcję(np na różne sposoby)\nWspierają ją m.in. Klasy abstrakcyjne(konstruktor domyslny) i interfejsy(nie ma konstruktora).",
+                    priority: 3,
+                },
+                {
+                    question:
+                        "Czym jest dziedziczenie w programowaniu obiektowym i kiedy warto je stosować?",
+                    answer: "Dziedziczenie to mechanizm pozwalający podklasie przyjąć właściwości i metody nadklasy.  Po co: unikanie duplikacji kodu, współdzielenie logiki między klasami. Przykład: Zwierze(może jeść)=>pies(może i jeść i szczekać(inne zwierzeta nie szczekaja))",
+                    priority: 3,
+                },
+                {
+                    question:
+                        "Czym jest polimorfizm i jak realizuje się go w językach obiektowych?",
+                    answer: "Polimorfizm(dziala podczas dziedziczenia) to zapisywanie jednej metofy pod różnymi postaciami.\nStatyczny: W klasie może być kilka metod z taką samą nazwą(ale różnymi parametrami).\nDynamiczny: Przesłanianie metody. W nadrzędnej klasie jest virtual metoda, a w podrzędnej override metoda(ona będzie wykonana), ma mieć taką samą nazwę.",
+                    priority: 3,
+                },
+                {
+                    question:
+                        "Na czym polega hermetyzacja (enkapsulacja) i jakie korzyści wynikają z jej stosowania?",
+                    answer: "Hermetyzacja(enkapsulacja) polega na ukrywaniu szczegółów implementacji klasy przez ograniczenie dostępu do niej za pomocą modyfikatorów dostępu(private, protected itd.) i udostępnianiem ich przez gettery/settery.",
+                    priority: 3,
+                },
+                {
+                    question:
+                        "Czym jest kompozycja w programowaniu obiektowym i jakie jest jej zastosowanie?",
+                    answer: "Kompozycja to technika, w której obiekty składają się z innych obiektów żeby stworzyć bardziej złożone struktury. Stosowane żeby uniknąć problemów związanych z dziedziczeniem: zwiększanie sztywności i złożoności kodu, tworzenie problemów z testowaniem i debugowaniem.",
+                    priority: 3,
+                },
+                {
+                    question:
+                        "Na czym polega mechanizm wyjątków w programowaniu obiektowym i jaka jest jego rola?",
+                    answer: "Wyjątki służy do obsługi błędów. Pozwala na wyłapywanie i zarządzanie błędami w trakcie działani programu. Np. jeżeli użytkownik podzieli przez 0 to zamiast wysypać program można pokazać komunikat.",
+                    priority: 3,
+                },
+                {
+                    question:
+                        "Jak wygląda zarządzanie pamięcią w kontekście czasu życia obiektów w programowaniu obiektowym?",
+                    answer: "Polega na przydzielaniu i zwalnianiu pamięci obiektom. Obiekty są tworzone w momencie alokacji pamięci, a pamięć zwalniana gdy obiekt przestaje być używany. Najczęściej działa garbage collector, czasami ręczne zarządzanie pamięcią.",
+                    priority: 3,
+                },
+                {
+                    question:
+                        "Czym są typy generyczne w programowaniu obiektowym i jakie są korzyści ich stosowania?",
+                    answer: "<T> Typy generyczne pozwalają na tworzenie klas, metod, które mogą działać z różnymi typami danych. Korzyści to wielokrotne użycie kodu, unikanie błędów.",
+                    priority: 3,
+                },
+
+                // Inne
+                {
+                    question:
+                        "Omów mechanizm wyznaczania trasy w sieciach komputerowych, podaj przykłady protokołów routingu.",
+                    answer: "Polega on na przekazywaniu pakietów z jednej sieci do innej najlepszą ścieżką wybraną przez router. Routing Information Protocol, Open Shortest Path First",
+                    priority: 1,
+                },
+                {
+                    question:
+                        "Wyjaśnij zasadę działania systemu DNS (Domain Name System).",
+                    answer: "Tłumaczy nazwy domenowe (np. google.com) na adresy ip, umożliwiając komputerom odnajdywanie serwerów w internecie.",
+                    priority: 2,
+                },
+                {
+                    question:
+                        "Wyjaśnij różnice pomiędzy protokołami TCP oraz UDP.",
+                    answer: "TCP(połączeniowy) zapewnia niezawodność, kolejność pakietów ale wolniejszy. UDP(bezpołączeniowy) nie gwarantuje dostarczenia ani kolejności danych aleszybszy (np. transmisja w internecie)",
+                    priority: 1,
+                },
+                {
+                    question:
+                        "Testy penetracyjne – charakterystyka poszczególnych etapów.",
+                    answer: "rozpoznanie,skanowanie(portów i usług), eksploatacja(próba wykorzystania podatności), utrzymanie dostępu(symulacja działać atakującego), analiza i raportowanie(podsumowanie wyników)",
+                    priority: 1,
+                },
+                {
+                    question:
+                        "Ataki Dos/DDoS – rodzaje i metody przeprowadzania.",
+                    answer: "Wysyłanie ogromnej ilości danych na cel w celu przeciążenia sieci; skupienie się na protokołach komunikacyjnych. Metody: botnety(sieć zainfekowanych urządzeń)",
+                    priority: 1,
+                },
+                {
+                    question:
+                        "Omów zasadę przeprowadzania ataków MITM (Man in the Middle)",
+                    answer: "Polega na przechwyceniu i zmodyfikowaniu komunikacji pomiędzy dwoma stronami bez ich wiedzy. Atakujący może podsłuchiwać, zmieniać dane.",
+                    priority: 1,
+                },
+                {
+                    question:
+                        "Wymień i krótko omów zastosowania najważniejszych diagramów UML.",
+                    answer: "Diagram przypadków użycia - pokazuje interakcje użytkowników z systemem.\nDiagram klas - przedstawia struktury danych i ich zależności.\nDiagram stanów - modeluje zmiany stanów obiektów w czasie.",
+                    priority: 3,
+                },
+                {
+                    question:
+                        "Algorytmy przeszukiwania przestrzeni stanów w systemach sztucznej inteligencji.",
+                    answer: "Algorytmy przeszukiwania przestrzeni stanów to metody znalezienia optymalnego rozwiązania.\nPrzykłady: BFS, DFS, A*",
+                    priority: 1,
+                },
+                {
+                    question: "Obliczenia ewolucyjne",
+                    answer: "Jest to metoda inspirowana ewolucją biologiczną. Wykorzystuje algorytmy genetyczne i techniki oparte na selekcji, mutacji.",
+                    priority: 1,
+                },
+                {
+                    question:
+                        "Zbiory przybliżone(Polska Szkola Sztucznej Inteligencji)",
+                    answer: "Zbiory przybliżone(opracował Zdzisław Pawlak) służą do modelowania niepewności przez podział danych na klasy przybliżone za pomocą dolnych i górnych przybliżeń",
+                    priority: 1,
+                },
+                {
+                    question:
+                        "Wnioskowanie oparte na logice w systemach sztucznej inteligencji",
+                    answer: "Jest to sposób myślenia, w którym system analizuje fakty i stosuje zasady logiki żeby dojść do wniosków.",
+                    priority: 1,
+                },
+                {
+                    question: "Sztuczne sieci neuronowe",
+                    answer: "Używa się ich do podejmowania decyzji. Warstwa wejściowa, warstwy ukryte, warstwa wyjściowa.\nSztuczny neuron zbiera sygnały wejściowe, przelicza je na podstawie wagi i wysyła sygnał wyjściowy.",
+                    priority: 2,
+                },
+                {
+                    question:
+                        "REST na jakim protokole oparty i jakie podstawowe operacje.",
+                    answer: "REST to styl architektury API oparty na protokole HTTP. Wykorzystuje podstawowe metody GET, POST, PUT, DELETE.",
+                    priority: 2,
+                },
+
+                // Systemy operacyjne
+                {
+                    question:
+                        "Omów diagram stanów procesu i przejścia pomiędzy stanami.",
+                    answer: "Diagram stanów procesu przedstawia różne stany, przez które może przejść proces w trakcie swojego cyklu życia oraz warunki, które wyzwalają przejście ze stanu do innego.",
+                    priority: 2,
+                },
+                {
+                    question:
+                        "Omów zasadę działania monitora i zmiennych warunkowych.",
+                    answer: "Monitor zapewnie, że tylko jeden wątek może wykonywać kod. Zmienna warunkowa umożliwia wątkowi czekanie na pełnienie określonego warunku.",
+                    priority: 2,
+                },
+                {
+                    question:
+                        "Omów algorytmy szeregowania rotacyjny, FCFS, SJF i SJF z wywłaszczaniem",
+                    answer: "rotacyjny: przydziela czas procesorowy każdemu procesowi po równo\nfirst come, first served: procesy realizowane w kolejności przybycia\nshortest job first: wybiera proces z najkrótszym czasem wykonania\nsjf z wywłaszczeniem: wybiera proces z najkrótszym czasem do zakończenia, może przerywać procesy",
+                    priority: 2,
+                },
+
+                // Algorytmy i struktury danych
+                {
+                    question:
+                        "Wyjaśnij pojęcia: złożoność czasowa algorytmu (pesymistyczna i średnia). Określ złożoność czasową wybranego algorytmu sortowania.",
+                    answer: "Złożoność czasowa algorytmu określa jak czas jego działania rośnie wraz z rozmiarem danych wejściowych.\nŚrednia: oczekiwany czas działania, zakładając losowe dane wejściowe.\nPesymistyczna w najgorszym przypadku.\nBubblesort i średnia i pesymistyczna O(n2)",
+                    priority: 2,
+                },
+                {
+                    question:
+                        "Wyjaśnij na przykładach różnice pomiędzy techniką zachłanną projektowania algorytmów a programowaniem dynamicznym.",
+                    answer: "Technika zachłanna wybiera najlepszą opcję na każdym etapie, mając nadzieję, że doprowadzi to do optymalnego rozwiązania. Np. w problemie plecakowym wybieramy przedmiot o największym stosunku wartości do wagi.\nW dynamicznym dzielimy problem na podproblemy i zapisujemy wyniki podproblemów unikając ich ponownego obliczania.",
+                    priority: 2,
+                },
+                {
+                    question:
+                        "Co to znaczy, że problem komputerowy jest trudno rozwiązalny? Podaj przykłady problemów trudnych obliczeniowo.",
+                    answer: "To znaczy, że nie ma efektywnego algorytmu, który rozwiązuje go w rozsądnym czasie(wielomianowym). Przykłady: problem komiwojażera(najkrótsza trasa odwiedzając wszystkie miasta), rozkładanie dużych liczb na czynniki pierwsze. Prosciej: im wiekszy problem tym bardziej czas potrzbny na rozwiązanie rośnie i staje się nieosiągalny.",
+                    priority: 2,
+                },
+
+                // Bazy danych
+                {
+                    question:
+                        "Podaj definicję i znaczenie kluczy w relacyjnych bazach danych.",
+                    answer: "Klucz główny(primary) zapewnia unikalność i nie może być NULLem. Klucz obcy(foreign) wskazuje na klucz główny innej tabeli, zapewniając spójność danych.",
+                    priority: 2,
+                },
+                {
+                    question: "Podaj typy zapytań SQL.",
+                    answer: "Data Definition Language(DDL) - CREATE, ALTER, DROP\nData Manipulation Language(DML) - INSERT, UPDATE, DELETE\nData Query Language(DQL) - SELECT",
+                    priority: 2,
+                },
+                {
+                    question:
+                        "Na czym polega proces normalizacji relacyjnej bazy danych.",
+                    answer: "Normalizacja baz danych to podział dużych tabel na mniejsze, powiązane ze sobą zgodnie z kolejnymi postaciami normalnymi. Pozwala to na uniknięcie powtórzeń.",
+                    priority: 2,
+                },
+                {
+                    question: "Omów możliwości organizacji pliku rekordów.",
+                    answer: "Haszowane - używają funkcji haszowej do szybkiego dostępu do rekordów.\nUporządkowane - rekordy przechowywane w określonym porządku, ułatwia to ich wyszukiwanie.\nNieuporządkowane - rekordy przechowywane w losowej kolejności. Przyśpiesza dodawanie danych ale utrudnia wyszukiwanie.",
+                    priority: 2,
+                },
+                {
+                    question: "Opisz budowę indeksu w postaci B+ drzewa.",
+                    answer: "B+ drzewo jest zrównoważone - wszystkie dane znajdują się na jednym poziomie, zapewnia stałą głębokość wyszukiwania.\nDrzewo składa się z korzenia przechowującego wartości graniczne kluczy i wskaźniki.\nWęzły wewnętrzne przechowują klucze indeksujące kierujące do elementów-dzieci.\nLiście przechowują pary klucz-wskaźnik do rekordów danych. Są połączone ze sobą w listę kierunkową żeby ułatwić przeszukiwanie.",
+                    priority: 2,
+                },
+                {
+                    question:
+                        "Co to są transakcje w bazach danych? Omów podstawowe właściwości transakcji (ACID).",
+                    answer: "Transakcja to zbiór operacji wykonywanych jako jedna całość.\nAtomicity(atomowość) - wykonuje się w całości albo wcale.\nConsistency(spójność) - po transakcji baza pozostaje w poprawnym stanie.\nIsolation(izolacja) - transakcje nie wpływają na siebie nawzajem.\nDurability(trwałość) - po zatwierdzeniu transakcji dane są trwale zapisane.",
+                    priority: 2,
+                },
+
+                // Systemy baz danych
+                {
+                    question:
+                        "Podaj czynniki wpływające na wydajność bazy danych.",
+                    answer: "wydajność sprzętu na którym działa baza danych. Procesor, ram, dyski pozwalają szybciej przetwarzać zapytania\nindeksy przyśpieszają wyszukiwanie danych ale duża ich ilość może spowalniać insert i update\noptymalizacja zapytań - należy unikać skomplikowanych operacji(łączenie tabel, podzapytania)",
+                    priority: 2,
+                },
+                {
+                    question:
+                        "Podaj kroki wykonywania zapytań SQL i sposoby zwiększania szybkości wykonania.",
+                    answer: "FROM i JOIN\nWHERE\nGROUP BY\nHAVING\nSELECT\nORDER BY\nLIMIT\nPrzyśpieszenie zapytań: indeksowanie kolumn, optymalizacja zapytań, ograniczenie liczby przetwarzanych danych",
+                    priority: 2,
+                },
+
+                // Zaawansowane techniki programistyczne
+                {
+                    question:
+                        "Wymień co najmniej 3 kreacyjne wzorce projektowe i omów jeden z nich wskazany przez komisję.",
+                    answer: "Singleton - zapewnia istnienie tylko jednej instancji klasy i globalny dostęp do niej\nPrototyp - pozwala na tworzenie nowych obiektów przez klonowanie istniejących\nMetoda wytwórcza(factory method) - udostępnia interfejs do tworzenia obiektów w klasie bazowej, pozwala podklasom zmieniać typ tworzonych obiektów.",
+                    priority: 2,
+                },
+                {
+                    question:
+                        "Wymień co najmniej 3 strukturalne wzorce projektowe i omów jeden z nich wskazany przez komisję.",
+                    answer: "Proxy - pośrednik kontrolujący dostęp do obiektu\nFasada - upraszcza interfejs do złożonego systemu\nAdapter - dostosowuje interfejs jednej klasy do innej",
+                    priority: 2,
+                },
+                {
+                    question:
+                        "Wymień co najmniej 3 czynnościowe(behawioralne) wzorce projektowe i omów jeden z nich wskazany przez komisję.",
+                    answer: "Iterator - pozwala przejść po elementach zbioru bez pokazywania jego formy(lista, drzewo itd.)\nStrategia - pozwala na wymianę algorytmu w trakcie działania programu\nPamiątka - zapisuje i przywraca stan obiektu",
+                    priority: 2,
+                },
+                {
+                    question:
+                        "Wymień co najmniej 3 architekturalne wzorce projektowe i omów jeden z nich wskazany przez komisję.",
+                    answer: "MVC(Model-View-Controller) - Podział na model(dane i logika biznesowa), view(interfejs użytkownika) i controller(sterowanie przepływem danych)\nMikrousługi - aplikacja podzielona na niezależne usługi komunikujące się np. API. Łatwe skalowanie ale trudniejsze zarządzanie.\nMonolit - cała aplikacja działa jako jedna całość, moduły ściśle ze sobą powiązane. Proste w implementacji ale trudne w skalowaniu.",
+                    priority: 2,
+                },
+                {
+                    question:
+                        "Wyjaśnij różnicę między dynamicznym i statycznym typowaniem (kontrolą typu) w programowaniu.",
+                    answer: "Statyczne typowanie sprawdza typy zmiennych w czasie kompilacji(C, Java), a dynamiczne sprawdza je w czasie wykonania programu(JavaScript)",
+                    priority: 2,
+                },
+
+                // Narzędzia procesu tworzenia oprogramowania
+                {
+                    question:
+                        "Co to są systemy kontroli wersji, jakie są ich zalety?",
+                    answer: "Systemy kontroli wersji to narzędzia umożliwiające zarządzanie zmianami w kodzie źródłowym, śledzenie historii modyfikacji oraz współpracę wielu osób nad projektem. Umożliwia cofanie się do wcześniejszych wersji.",
+                    priority: 2,
+                },
+                {
+                    question:
+                        "Czym różni się profilowanie pamięci kodu zarządzanego a kodu niezarządzanego?",
+                    answer: "Profilowanie pamięci kodu zarządzanego (C#, Java) polega na monitorowaniu zużycia pamięci w środowisku gdzie pamięć jest automatycznie zarządzana przez garbage collector. Kod niezarządzany(C, C++) programista ręcznie alokuje i zwalnia pamięć. Profilowanie tam obejmuje monitorowanie wycieków pamięci.",
+                    priority: 2,
+                },
+                {
+                    question:
+                        "Do czego służą narzędzia do zarządzania błędami, jakie są ich zalety?",
+                    answer: "Narzędzia do zarządzania błędami służą do identyfikowania, śledzenia i zarządzania błędami w aplikacjach lub systemach. Pozwalają na automatyczne wysyłanie powiadomień o błędach, centralne zarządzanie nimi.",
+                    priority: 2,
+                },
+                {
+                    question:
+                        "Co to jest refaktoring kodu, podaj dwa przykłady?",
+                    answer: "Refaktoring kodu to proces modyfikacji istniejącego kodu w celu poprawy jego czytelności i wydajności.\nPrzykłady: zmiana nazw zmiennych na bardziej opisowe, wydzielenie metod oraz usunięcie powtarzającego się kodu.",
+                    priority: 2,
+                },
+
+                // Architektura komputerów
+                {
+                    question:
+                        "Omów konstrukcje modelu programowego procesora w podejściu CISC i RISC.",
+                    answer: "CISC mają bogaty zestaw instrukcji i złożone operacje. Są wolniejsze.\nRISC mają prostszy, ograniczony zestaw instrukcji. Są szybsze i energooszczędne.",
+                    priority: 2,
+                },
+                {
+                    question:
+                        "Zdefiniuj superskalarną jednostkę centralną – omów zasady działania, występujące hazardy i opóźnienia.",
+                    answer: "Superskalarna jednostka centralna(CPU) to procesor zdolny do wykonywania wielu instrukcji w jednym cyklu zegara.\nPobiera wiele instrukcji i rozdziela je do jednostek wykonawczych. Instrukcje są realizowane niezależnie.\nHazard danych - gdy instrukcja zależy od wyniku innej, jeszcze niewykonanej instrukcji.\nOpóźnienia wynikać mogą z zależności między instrukcjami.",
+                    priority: 1,
+                },
+                {
+                    question:
+                        "Zdefiniuj wyjątki podając ich definicje i klasyfikacje. Omów obsługę wyjątków.",
+                    answer: "Wyjątki w programowaniu to nieoczekiwane błędy występujące podczas wykonywania programu.\nWyjątki kontrolowane obsługiwane przez programistę.\nWyjątki niekontrolowane wynikające z błędów w logice programu np. IndexOutOfBound\nObsługa wyjątkow blokami try-catch.",
+                    priority: 2,
+                },
+                {
+                    question:
+                        "Omów podstawy realizacji systemu pamięci podręcznej uwzględniając jej poziomowość.",
+                    answer: "Pamięć podręczna(cache) umożliwia szybszy dostęp do często używanych danych. Poziomy od L1 do L3. L1 najsybszy i najmniejszy, każdy niżej wolniejszy i większy.",
+                    priority: 1,
+                },
+                {
+                    question:
+                        "Zdefiniuj budowę modelu programowego jednostki centralnej – omów niezbędne rejestry, tryby adresowania, listę instrukcji oraz model operacji warunkowych.",
+                    answer: "Jednostka centralna(CPU) składa się z jednostki sterującej, arytmetyczno-logicznej oraz rejestrów. Rejestry przechowują dane tymczasowe i wyniki obliczeń.",
+                    priority: 1,
+                },
+
+                // Inżynieria oprogramowania
+                {
+                    question:
+                        "Wymień i krótko scharakteryzuj najważniejsze modele cyklu życia oprogramowania.",
+                    answer: "Model agile - elastyczny, z naciskiem na współpracę i szybkie dostosowanie do zmian.\nModel wodospadowy - liniowy, każda faza musi być zakończona przed zaczęciem drugiej.\nModel V - rozszerzenie wodospadowego, z naciskiem na testowanie na każdym etapie.",
+                    priority: 3,
+                },
+                {
+                    question:
+                        "Podaj i krótko scharakteryzuj rodzaje testów oprogramowania.",
+                    answer: "Jednostkowe - sprawdzają pojedynczych funkcji lub metod.\nIntegracyjne - sprawdzają współdziałanie różnych modułów.\nSystemowe - sprawdzają całość systemu.\nWydajnościowe - sprawdzenie jak system działa pod dużym obciążeniem.\nBezpieczeństwa - oceniają odporność na ataki.",
+                    priority: 2,
+                },
+                {
+                    question:
+                        "Podaj przykłady dwóch metryk dla oceny jakości programu obiektowego i skomentuj jakie kryteria jakości te metryki odzwierciedlają.",
+                    answer: "Pokrycie testami - określa jaka część kodu została przetestowana.\nZłożoność obiektowa - mierzy liczbę klas oraz zależności między klasami. Sprawdza czytelność programu.",
+                    priority: 2,
+                },
+            ];
+
+            // Elementy DOM
+            const flashcardEl = document.getElementById("flashcard");
+            const cardFrontContent = document.querySelector(
+                "#card-front .card-content"
+            );
+            const cardBackContent = document.querySelector(
+                "#card-back .card-content"
+            );
+            const nextBtn = document.getElementById("nextBtn");
+            const filterSelect = document.getElementById("filterSelect");
+
+            let filteredCards = [...flashcards];
+
+            // Funkcja losująca kartę z uwzględnieniem wagi (priorytetu)
+            function getRandomCard() {
+                let weightedArray = [];
+                filteredCards.forEach((card) => {
+                    // Im wyższy priorytet, tym więcej razy karta trafia do tablicy ważonej
+                    for (let i = 0; i < card.priority; i++) {
+                        weightedArray.push(card);
+                    }
+                });
+                if (weightedArray.length === 0) {
+                    return null;
+                }
+                const randomIndex = Math.floor(
+                    Math.random() * weightedArray.length
+                );
+                return weightedArray[randomIndex];
+            }
+
+            // Funkcja do wyświetlenia karty wraz z ustawieniem tła (na elemencie .card-content)
+            function showCard(card) {
+                if (!card) {
+                    cardFrontContent.textContent = "Brak kart do wyświetlenia.";
+                    cardBackContent.textContent = "";
+                    return;
+                }
+                // Upewnij się, że karta jest ustawiona w pozycji początkowej (nieodwrócona)
+                flashcardEl.classList.remove("flip");
+                cardFrontContent.textContent = card.question;
+                cardBackContent.textContent = card.answer;
+
+                // Ustawienie tła (tylko na wewnętrznym elemencie) w zależności od priorytetu:
+                let bgColor;
+                if (card.priority === 3) {
+                    bgColor = "rgba(0, 255, 0, 0.1)"; // lekko zielony
+                } else if (card.priority === 1) {
+                    bgColor = "rgba(255, 0, 0, 0.1)"; // lekko czerwony
+                } else {
+                    bgColor = "#fff"; // domyślnie biały dla priorytetu 2
+                }
+                // Ustawienie tła dla obu stron
+                document.querySelectorAll(".card-content").forEach((el) => {
+                    el.style.backgroundColor = bgColor;
+                });
+            }
+
+            // Aktualizuj listę kart wg wybranego filtra
+            function updateFilter() {
+                const filterValue = filterSelect.value;
+                if (filterValue === "all") {
+                    filteredCards = [...flashcards];
+                } else {
+                    filteredCards = flashcards.filter(
+                        (card) => card.priority.toString() === filterValue
+                    );
+                }
+            }
+
+            // Obsługa kliknięcia – obrót karty
+            flashcardEl.addEventListener("click", () => {
+                flashcardEl.classList.toggle("flip");
+            });
+
+            // Obsługa przycisku "Następna fiszka"
+            nextBtn.addEventListener("click", () => {
+                updateFilter();
+                const card = getRandomCard();
+                showCard(card);
+            });
+
+            // Obsługa zmiany filtra
+            filterSelect.addEventListener("change", () => {
+                updateFilter();
+                const card = getRandomCard();
+                showCard(card);
+            });
+
+            // Inicjalizacja – pokaż pierwszą kartę
+            document.addEventListener("DOMContentLoaded", () => {
+                updateFilter();
+                const card = getRandomCard();
+                showCard(card);
+            });
+        </script>
+    </body>
+</html>
