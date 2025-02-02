@@ -188,7 +188,7 @@
                 {
                     question:
                         "Wyjaśnij pojęcia wskaźnika i referencji. Jakie możliwości oferują, z jakimi problemami należy się liczyć?",
-                    answer: "Wskaźnik to zmienna przechowująca adres innej zmiennej. Może prowadzić do wycieków pamięci, umożliwia dynamiczne zarządzanie pamięcią.\nReferencja to inna nazwa innej zmiennej. Bezpieczniejsza bo odnosi się do obiektu, nie pozwala na manipulację adresami.",
+                    answer: "Wskaźnik to zmienna przechowująca adres innej zmiennej. Może prowadzić do wycieków pamięci, umożliwia dynamiczne zarządzanie pamięcią.\nReferencja to nadanie aliasu(innej nazwy) istniejącej zmiennej. Bezpieczniejsza bo odnosi się do obiektu, nie pozwala na manipulację adresami.",
                     priority: 3,
                 },
                 {
@@ -244,7 +244,7 @@
                 {
                     question:
                         "Na czym polega mechanizm wyjątków w programowaniu obiektowym i jaka jest jego rola?",
-                    answer: "Wyjątki pozwalają na wyłapywanie i zarządzanie błędami w trakcie działani programu. Np. jeżeli użytkownik podzieli przez 0 to zamiast wysypać program można pokazać komunikat.",
+                    answer: "Wyjątki pozwalają na wyłapywanie i zarządzanie błędami w trakcie działania programu. Np. jeżeli użytkownik podzieli przez 0 to zamiast wysypać program można pokazać komunikat.",
                     priority: 3,
                 },
                 {
@@ -276,7 +276,7 @@
                 {
                     question:
                         "Wyjaśnij różnice pomiędzy protokołami TCP oraz UDP.",
-                    answer: "TCP(połączeniowy) zapewnia niezawodność, kolejność pakietów ale wolniejszy. UDP(bezpołączeniowy) nie gwarantuje dostarczenia ani kolejności danych aleszybszy (np. transmisja w internecie)",
+                    answer: "TCP(połączeniowy) zapewnia niezawodność, kolejność pakietów ale wolniejszy. UDP(bezpołączeniowy) nie gwarantuje dostarczenia ani kolejności danych ale szybszy (np. transmisja w internecie)",
                     priority: 1,
                 },
                 {
@@ -348,7 +348,7 @@
                 {
                     question:
                         "Omów zasadę działania monitora i zmiennych warunkowych.",
-                    answer: "Monitor zapewnie, że tylko jeden wątek może wykonywać kod. Zmienna warunkowa umożliwia wątkowi czekanie na pełnienie określonego warunku.",
+                    answer: "Monitor zapewnia, że tylko jeden wątek może wykonywać kod. Zmienna warunkowa umożliwia wątkowi czekanie na pełnienie określonego warunku.",
                     priority: 2,
                 },
                 {
@@ -403,13 +403,13 @@
                 },
                 {
                     question: "Opisz budowę indeksu w postaci B+ drzewa.",
-                    answer: "B+ drzewo jest zrównoważone - wszystkie dane znajdują się na jednym poziomie, zapewnia stałą głębokość wyszukiwania.\nDrzewo składa się z korzenia przechowującego wartości graniczne kluczy i wskaźniki.\nWęzły wewnętrzne przechowują klucze indeksujące kierujące do elementów-dzieci.\nLiście przechowują pary klucz-wskaźnik do rekordów danych. Są połączone ze sobą w listę kierunkową żeby ułatwić przeszukiwanie.",
+                    answer: "B+ drzewo jest zrównoważone - wszystkie dane znajdują się na jednym poziomie.\nDrzewo składa się z korzenia, węzłów wewnętrznych i liści. Te ostatnie są połączone ze sobą w listę kierunkową żeby ułatwić przeszukiwanie.",
                     priority: 2,
                 },
                 {
                     question:
                         "Co to są transakcje w bazach danych? Omów podstawowe właściwości transakcji (ACID).",
-                    answer: "Transakcja to zbiór operacji wykonywanych jako jedna całość.\nAtomicity(atomowość) - wykonuje się w całości albo wcale.\nConsistency(spójność) - po transakcji baza pozostaje w poprawnym stanie.\nIsolation(izolacja) - transakcje nie wpływają na siebie nawzajem.\nDurability(trwałość) - po zatwierdzeniu transakcji dane są trwale zapisane.",
+                    answer: "Transakcja to zbiór operacji wykonywanych razem.\nAtomicity(atomowość) - wykonuje się w całości albo wcale.\nConsistency(spójność) - po transakcji baza pozostaje w poprawnym stanie.\nIsolation(izolacja) - transakcje nie wpływają na siebie nawzajem.\nDurability(trwałość) - po zatwierdzeniu transakcji dane są trwale zapisane.",
                     priority: 2,
                 },
 
